@@ -116,6 +116,7 @@ int main(void) {
 
     glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
     glViewport(0, 0, width, height);
+    
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -135,7 +136,7 @@ int main(void) {
         cam = goal_cam * 0.001f + cam * 0.999f;
 
         if(camera_fixed)
-            my_scene.LookAt(0.0, 5.0, -7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+            my_scene.LookAt(0.0, 5.0, -10.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
         else
             my_scene.LookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], 0.0, 1.0, 0.0);
         

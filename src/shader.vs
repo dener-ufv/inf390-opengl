@@ -16,6 +16,6 @@ void main()
 {
     gl_Position = MVPMatrix*vec4(Position, 1.0);
     vs_Position = MVMatrix*vec4(Position, 1.0);
-    vs_Normal = NormalMatrix*Normal;
+    vs_Normal = normalize(NormalMatrix*Normal);
     vs_Color = vec4(Color.x,Color.y, Color.z, 1.0);
 }

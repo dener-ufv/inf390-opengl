@@ -3,5 +3,5 @@
 using namespace std;
 
 class Ground : public vector<object*> {
-    
+    // TODO
 };

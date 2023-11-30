@@ -16,9 +16,6 @@ using namespace std;
 #include <glm/glm.hpp>
 #include <vector>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 class scene;
 class object {
    public:
