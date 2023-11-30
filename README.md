@@ -74,3 +74,7 @@ Os resultados desta etapa do trabalho poder ser vistos executando o trabalho, ma
 ### Camera Model
 
 ![CameraMovel](imgs/camera-movel-gif.gif)
+
+## Desenvolvedor
+
+Dener Vieira Ribeiro [github](https://github.com/deneribeiro10)
