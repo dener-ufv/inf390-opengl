@@ -16,13 +16,13 @@ using namespace std;
 #include <glm/glm.hpp>
 #include <vector>
 
+#include <texture.h>
+
 class scene;
 class object {
    public:
     friend class scene;
     object();
-    // object(int v_number, GLfloat *Vertices);
-    // object(int v_number, int i_number, GLfloat *Vertices, GLushort *index);
     ~object();
     void Model(glm::mat4 model_matrix);
     void push_right_matrix(glm::mat4 matrix);
@@ -37,10 +37,14 @@ class object {
     void set_vertices(vector<GLfloat> v);
     void set_faces_indexes(vector<GLuint> v);
     void set_center(float x, float y, float z);
+    void set_use_texture(bool use_texture);
+    void set_texture_combiner(int texture_combiner);
 
     float get_center_x() const;
     float get_center_y() const;
     float get_center_z() const;
+
+    void load_texture(string filename);
 
    private:
     void render(GLint position, GLint normal, GLint texture);
@@ -54,6 +58,11 @@ class object {
     int i_number;
     string name;
     GLfloat center[3];
+    
+    bool use_texture;
+    Texture *my_texture;
+    //0 NO TEXTURE, 1 REPLACE, 2 MODULATE
+    int Texture_combiner;
 };
 
 object::~object() {
@@ -69,32 +78,8 @@ object::object() {
     color[1] = color[2] = 0.0;
     Model_matrix = glm::mat4(1.0);
     center[0] = center[1] = center[2] = 0.0;
+    use_texture = false;
 };
-
-// object::object(int v_number, GLfloat *Vertices) : v_number(v_number) {
-//     indexed = false;
-//     wireframe = false;
-//     glGenBuffers(1, &VBO);
-//     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-//     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * v_number * 6, Vertices, GL_STATIC_DRAW);
-//     color[0] = 1.0;
-//     color[1] = color[2] = 0.0;
-//     Model_matrix = glm::mat4(1.0);
-// };
-
-// object::object(int v_number, int i_number, GLfloat *Vertices, GLushort *index) : v_number(v_number), i_number(i_number) {
-//     indexed = true;
-//     wireframe = false;
-//     glGenBuffers(1, &VBO);
-//     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-//     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * v_number * 6, Vertices, GL_STATIC_DRAW);
-//     glGenBuffers(1, &EBO);
-//     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-//     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * i_number, index, GL_STATIC_DRAW);
-//     color[0] = 1.0;
-//     color[1] = color[2] = 0.0;
-//     Model_matrix = glm::mat4(1.0);
-// }
 
 void object::set_color(float r, float g, float b) {
     color[0] = r;
@@ -197,8 +182,22 @@ void object::set_center(float x, float y, float z) {
     center[2] = z;
 }
 
+void object::set_use_texture(bool use_texture) {
+    this->use_texture = use_texture;
+}
+
+void object::set_texture_combiner(int texture_combiner) {
+    Texture_combiner = texture_combiner;
+}
+
 float object::get_center_x() const {return center[0];}
 float object::get_center_y() const {return center[1];}
 float object::get_center_z() const {return center[2];}
+
+void object::load_texture(string filename) {
+    my_texture = new Texture(GL_TEXTURE_2D, filename);
+    my_texture->load_image();
+    use_texture = true;
+}
 
 #endif

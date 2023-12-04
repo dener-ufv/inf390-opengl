@@ -11,7 +11,9 @@
 #include "object.h"
 #include "scene.h"
 
-#include "car.h"
+#include <car.h>
+#include <ground.h>
+
 
 using namespace std;
 
@@ -27,6 +29,9 @@ glm::vec3 center(0.0, 0.0, 0.0);
 Car carro;
 float curSpeed = 0.0;
 float curTurn = 0.0;
+
+// terrain info
+Ground terreno;
 
 static void error_callback(int error, const char *description) {
     fprintf(stderr, "Error: %s\n", description);
@@ -112,7 +117,10 @@ int main(void) {
     glEnable(GL_DEPTH_TEST);
     scene my_scene;
     carro = Car("../models/carro.obj");
+    terreno = Ground("../models/terreno.obj");
+
     my_scene.push_back_objects(carro);
+    my_scene.push_back_objects(terreno);
 
     glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
     glViewport(0, 0, width, height);

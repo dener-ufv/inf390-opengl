@@ -71,7 +71,7 @@ Os resultados desta etapa do trabalho poder ser vistos executando o trabalho, ma
 
 ![CameraFixa](imgs/camera-fixa-gif.gif)
 
-### Camera Model
+### Camera Móvel
 
 ![CameraMovel](imgs/camera-movel-gif.gif)
 
