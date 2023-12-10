@@ -16,15 +16,15 @@ using namespace std;
 #include <glm/glm.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include "stb_image.h"
 
 class Texture {
    public:
     friend class scene;
     Texture(GLenum TextureTarget, const std::string& FileName);
-    // bool Load_simple_bmp(int header_size, int Width, int Height, int BGR);
+    bool Load_simple_bmp(int header_size, int Width, int Height, int BGR);
+    bool load_image();
     void Bind(GLenum TextureUnit);
-    void load_image();
 
    private:
     std::string m_fileName;
@@ -41,50 +41,63 @@ Texture::Texture(GLenum TextureTarget, const std::string& FileName) {
     m_fileName = FileName;
 }
 
-// bool Texture::Load_simple_bmp(int header_size, int Width, int Height, int BGR) {
-//     GLubyte tex[Height][Width][3];
-//     try {
-//         ifstream arq(m_fileName, ios::binary);
-//         char c;
-//         if (!arq) {
-//             cout << "Error ao abrir" << m_fileName;
-//             exit(1);
-//         }
-//         int i = 0;
-//         for (int i = 0; i < header_size; i++)
-//             c = arq.get();
-//         for (int i = 0; i < Height; i++)
-//             for (int j = 0; j < Width; j++) {
-//                 if (!(BGR)) {
-//                     c = arq.get();
-//                     tex[i][j][2] = c;
-//                     c = arq.get();
-//                     tex[i][j][1] = c;
-//                     c = arq.get();
-//                     tex[i][j][0] = c;
-//                 } else {
-//                     c = arq.get();
-//                     tex[i][j][0] = c;
-//                     c = arq.get();
-//                     tex[i][j][1] = c;
-//                     c = arq.get();
-//                     tex[i][j][2] = c;
-//                 }
-//             }
+bool Texture::Load_simple_bmp(int header_size, int Width, int Height, int BGR) {
+    vector<GLubyte> tex(Height * Width * 3);
 
-//         arq.close();
-//         arq.clear();
-//     } catch (...) {
-//         cout << "Erro ao ler imagem" << endl;
-//         return false;
-//     }
+    try {
+        ifstream arq(m_fileName, ios::binary);
+        char c;
+        if (!arq) {
+            cout << "Error ao abrir" << m_fileName;
+            exit(1);
+        }
+        int i = 0;
+        for (int i = 0; i < header_size; i++)
+            c = arq.get();
+        for (int i = 0; i < Height; i++)
+            for (int j = 0; j < Width; j++) {
+                if (!(BGR)) {
+                    c = arq.get();
+                    tex[i * Width * 3 + j * 3 + 2] = c;
+                    c = arq.get();
+                    tex[i * Width * 3 + j * 3 + 1] = c;
+                    c = arq.get();
+                    tex[i * Width * 3 + j * 3 + 0] = c;
+                } else {
+                    c = arq.get();
+                    tex[i * Width * 3 + j * 3 + 0] = c;
+                    c = arq.get();
+                    tex[i * Width * 3 + j * 3 + 1] = c;
+                    c = arq.get();
+                    tex[i * Width * 3 + j * 3 + 2] = c;
+                }
+            }
 
-//     m_imageWidth = Width;
-//     m_imageHeight = Height;
-//     m_imageBPP = 3;
-//     LoadInternal((void*)tex);
-//     return true;
-// }
+        arq.close();
+        arq.clear();
+    } catch (...) {
+        cout << "Erro ao ler imagem" << endl;
+        return false;
+    }
+
+    m_imageWidth = Width;
+    m_imageHeight = Height;
+    m_imageBPP = 3;
+    LoadInternal((void*)tex.data());
+    return true;
+}
+
+bool Texture::load_image() {
+    GLubyte *tex = stbi_load(m_fileName.c_str(), &m_imageWidth, &m_imageHeight, &m_imageBPP, STBI_default);
+    if(tex == NULL) {
+        cout << "falha ao ler imagem" << endl;
+        return false;
+    }
+    cout << "load image " << m_fileName << endl;
+    cout << "width = " << m_imageWidth << " height = " << m_imageHeight << " channels = " << m_imageBPP << endl;
+    LoadInternal((void*)tex);
+    return true;
+}
 
 void Texture::LoadInternal(void* image_data) {
     glGenTextures(1, &m_textureObj);
@@ -127,16 +140,6 @@ void Texture::LoadInternal(void* image_data) {
 void Texture::Bind(GLenum TextureUnit) {
     glActiveTexture(TextureUnit);
     glBindTexture(m_textureTarget, m_textureObj);
-}
-
-void Texture::load_image() {
-    GLubyte *img = stbi_load(m_fileName.c_str(), &m_imageWidth, &m_imageHeight, &m_imageBPP, 0);
-    if(img == NULL) {
-        cout << "Failed to read image" << endl;
-        exit(1);
-    }
-    cout << "Texture loaded" << endl;
-    LoadInternal((void*)img);
 }
 
 #endif

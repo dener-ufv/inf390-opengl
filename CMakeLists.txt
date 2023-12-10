@@ -5,6 +5,8 @@ project(opengl VERSION 1.0)
 add_executable(opengl src/main.cpp)
 target_include_directories(opengl PUBLIC include/)
 
+set_property(TARGET opengl PROPERTY CXX_STANDARD 17)
+
 # glfw
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)

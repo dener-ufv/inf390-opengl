@@ -1,3 +1,6 @@
+#ifndef CAR_H
+#define CAR_H 
+
 #include <map>
 #include <string>
 #include <vector>
@@ -5,6 +8,7 @@
 #include <algorithm>
 
 #include "object.h"
+#include <loadobjects.h>
 
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
@@ -33,15 +37,13 @@ class Car : public vector<object*> {
 
 public:
     Car();
-    Car(string path);
+    Car(string path, string filename);
     void set_speed(float _speed);
     void set_turn(float _angle);
     void update();
     glm::mat4 get_model() const;
 
 private:
-    void load_car(string path);
-    void save_obj(object *obj, vector<GLfloat> vert, vector<GLuint> faces_indexes);
     void update_model();
     void update_centers();
 };
@@ -50,10 +52,29 @@ Car::Car() {
     // empty
 }
 
-Car::Car(string path) {
+Car::Car(string path, string filename) {
     carModel = glm::mat4(1.0);
 
-    load_car(path);
+    vector<object*> objs = load_objects(path, filename);
+
+    this->insert(this->end(), objs.begin(), objs.end());
+
+    for(object *o : objs) {
+        string n = o->get_name();
+        if(n == "roda_FD") {
+            rodaFD = o;
+        } else if(n == "roda_FE") {
+            rodaFE = o;
+        } else if(n == "roda_TD") {
+            rodaTD = o;
+        } else if(n == "roda_TE") {
+            rodaTE = o;
+        } else {
+            fixed.push_back(o);
+        }
+    }
+
+
     turnAngle = 0.0;
     weelAngle = 0.0;
     speed = 0.0;
@@ -113,131 +134,6 @@ void Car::update() {
 
 glm::mat4 Car::get_model() const {
     return carModel;
-}
-
-void Car::load_car(string path) {
-    ifstream file(path);
-    if (!file) {
-        cerr << "Error opening file: " << path << endl;
-        throw ios_base::failure("Error opening file: " + path);
-    }
-    // vertices, normals and texture from obj file
-    vector<vector<GLfloat>> vertices;
-    vector<vector<GLfloat>> normals;
-    vector<vector<GLfloat>> texture;
-
-    // each face has 3 triples (ver, nor, tex)
-    map<string, int> vertices_ids;
-    vector<GLfloat> obj_vertices;
-    vector<GLuint> obj_faces_indexes;
-
-    object *cur_obj = nullptr;
-
-    string line;
-    while (getline(file, line)) {
-        istringstream iss(line);
-        if (line[0] == '#') {
-            // cout << "comment: " << line << endl;
-            continue;  // comment
-        }
-        string token;
-        iss >> token;
-        if (token == "o") {
-            // save current
-            if (cur_obj != nullptr) save_obj(cur_obj, obj_vertices, obj_faces_indexes);
-            
-            // clear values
-            obj_vertices.clear();
-            obj_faces_indexes.clear();
-            
-            // create new object
-            cur_obj = new object();
-            string name;
-            iss >> name;
-            cur_obj->set_name(name);
-        } else if (token == "v") {
-            float x, y, z;
-            iss >> x >> y >> z;
-            vertices.push_back({x, y, z});
-            // cout << "v " << x << " " << y << z << endl;
-        } else if (token == "vn") {
-            float nx, ny, nz;
-            iss >> nx >> ny >> nz;
-            normals.push_back({nx, ny, nz});
-            // cout << "vn " << nx << " " << ny << nz << endl;
-        } else if (token == "vt") {
-            float u, v;
-            iss >> u >> v;
-            texture.push_back({u, v});
-            // cout << "vt " << u << " " << v << endl;
-        } else if (token == "f") {
-            // cout << "f ";
-            for (int i = 0; i < 3; ++i) {
-                string input_vertex;
-                iss >> input_vertex;
-                // cout << input_vertex << " ";
-                istringstream vss(input_vertex);
-                uint32_t index_v, index_n, index_u;
-                vss >> index_v;
-                if (vss.peek() == '/') {
-                    vss.ignore();
-                    if (vss.peek() != '/') {
-                        vss >> index_u;
-                    }
-                    if (vss.peek() == '/') {
-                        vss.ignore();
-                        vss >> index_n;
-                    }
-                }
-
-                if (!vertices_ids.count(input_vertex)) {
-                    vertices_ids[input_vertex] = obj_vertices.size() / 8;
-                    obj_vertices.push_back(vertices[index_v - 1][0]);
-                    obj_vertices.push_back(vertices[index_v - 1][1]);
-                    obj_vertices.push_back(vertices[index_v - 1][2]);
-                    obj_vertices.push_back(normals[index_n - 1][0]);
-                    obj_vertices.push_back(normals[index_n - 1][1]);
-                    obj_vertices.push_back(normals[index_n - 1][2]);
-                    obj_vertices.push_back(texture[index_u-1][0]);
-                    obj_vertices.push_back(texture[index_u-1][1]);
-                }
-
-                obj_faces_indexes.push_back(vertices_ids[input_vertex]);
-            }
-            // cout << endl;
-        } else if (token == "l") {
-            uint32_t a, b;
-            iss >> a >> b;
-            // cout << "l " << a << " " << b << endl;
-        } else if (token == "s") {
-            int a;
-            iss >> a;
-            // cout << "s " << a << endl;
-        }
-    }
-    file.close();
-    // save last
-    if (cur_obj != nullptr) save_obj(cur_obj, obj_vertices, obj_faces_indexes);
-}
-
-void Car::save_obj(object *obj, vector<GLfloat> vert, vector<GLuint> faces_indexes) {
-    obj->set_faces_indexes(faces_indexes);
-    obj->set_vertices(vert);
-                
-    string n = obj->get_name();
-    if(n == "roda_FD") {
-        rodaFD = obj;
-    } else if(n == "roda_FE") {
-        rodaFE = obj;
-    } else if(n == "roda_TD") {
-        rodaTD = obj;
-    } else if(n == "roda_TE") {
-        rodaTE = obj;
-    } else {
-        fixed.push_back(obj);
-    }
-
-    this->push_back(obj);
 }
 
 void Car::update_model() {
@@ -322,3 +218,5 @@ void Car::update_centers() {
     frontCenter[1] = ( rodaFE->get_center_y() + rodaFD->get_center_y() ) / 2.0; 
     frontCenter[2] = ( rodaFE->get_center_z() + rodaFD->get_center_z() ) / 2.0;
 }
+
+#endif

@@ -5,10 +5,10 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include <string.h>
 
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "utils.h"
@@ -17,6 +17,23 @@ using namespace std;
 #include <glm/glm.hpp>
 
 #include "object.h"
+#include "shadow_map.h"
+
+struct LightProperties {
+    bool is_camera_coordinate;
+    bool isEnabled;
+    bool isLocal;
+    bool isSpot;
+    glm::vec3 ambient;
+    glm::vec3 color;
+    glm::vec3 position;
+    glm::vec3 coneDirection;
+    float spotCosCutoff;
+    float spotExponent;
+    float constantAttenuation;
+    float linearAttenuation;
+    float quadraticAttenuation;
+};
 
 class scene {
    public:
@@ -24,28 +41,25 @@ class scene {
     ~scene();
     void render();
     void set_color(float r, float g, float b);
-    void set_ambient(float r, float g, float b);
     void Ortho3D(float WL, float WR, float WB, float WT, float zNear, float zFar);
     void perspective(float fovy, float aspect, float zNear, float zFar);
     void LookAt(float eyex, float eyey, float eyez,
                 float centerx, float centery, float centerz,
                 float upx, float upy, float upz);
     void Model(glm::mat4 model_matrix);
-    void push_back_object(object *new_object);
-    void push_back_objects(vector<object *> new_objects);
+    void set_light(int light_number, LightProperties my_light);
+    void push_back_object(object* new_object);
+    void push_back_objects(vector<object*> new_objects);
+    void set_Viewport(int X0, int Y0, int Width, int Height);
 
    private:
     GLuint ShaderProgram;
     glm::mat4 Projection_matrix;
     glm::mat4 View;
-    
-    glm::vec3 LightAmbient;
-    glm::vec3 LightColor;
-    glm::vec3 LightPosition;
-    float Shininess;
-    float Strength;
-
-    vector<object *> my_objects;
+    vector<object*> my_objects;
+    LightProperties lights[8];
+    const int MaxLights = 8;
+    int ViewportX0, ViewportY0, ViewportWidth, ViewportHeight;
 };
 scene::~scene() {
     for (auto it = my_objects.begin(); it != my_objects.end(); ++it) {
@@ -54,74 +68,114 @@ scene::~scene() {
 }
 
 scene::scene() {
-    const char *pVSFileName = "../src/shader.vs";
-    const char *pFSFileName = "../src/shader.fs";
+    const char* pVSFileName = "../src/shader.vs";
+    const char* pFSFileName = "../src/shader.fs";
     ShaderProgram = CompileShaders(pVSFileName, pFSFileName);
     Projection_matrix = glm::mat4(1.0);
     View = glm::mat4(1.0);
 
-    LightAmbient = glm::vec3(0.3, 0.3, 0.3);
-    LightColor = glm::vec3(1.0, 1.0, 1.0);
-    LightPosition = glm::vec3(0.0, 10.0, 5.0);
-    Shininess = 50.0;
-    Strength = 1.0;
+    for (int i = 1; i < MaxLights; i++)
+        lights[i].isEnabled = false;
+
+    lights[0].is_camera_coordinate = true;
+    lights[0].isEnabled = true;
+    lights[0].isLocal = true;
+    lights[0].isSpot = false;
+
+    lights[0].ambient[0] = lights[0].ambient[1] = lights[0].ambient[2] = 0.3;
+    lights[0].color[0] = lights[0].color[1] = lights[0].color[2] = 1.0;
+    lights[0].position[0] = 0.0;
+    lights[0].position[1] = 10.0;
+    lights[0].position[2] = 0.0;
+
+    lights[0].constantAttenuation = 1.0;
+    lights[0].linearAttenuation = 0.0;
+    lights[0].quadraticAttenuation = 0.0;
+    ViewportX0 = 0;
+    ViewportY0 = 0;
+    ViewportWidth = 800;
+    ViewportHeight = 800;
 }
 
-void scene::push_back_object(object *new_object) {
+void scene::push_back_object(object* new_object) {
     my_objects.push_back(new_object);
 }
 
 void scene::render() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(ShaderProgram);
-    GLint position = glGetAttribLocation(ShaderProgram, "Position");
-    GLint normal = glGetAttribLocation(ShaderProgram, "Normal");
-    GLint texture = glGetAttribLocation(ShaderProgram, "Texture");
     GLint color_u = glGetUniformLocation(ShaderProgram, "Color");
+    GLint mvp_u = glGetUniformLocation(ShaderProgram, "MVPMatrix");
+    GLint mv_u = glGetUniformLocation(ShaderProgram, "MVMatrix");
+    GLint normal_u = glGetUniformLocation(ShaderProgram, "NormalMatrix");
 
-    GLint mvp_matrix_u = glGetUniformLocation(ShaderProgram, "MVPMatrix");
-    GLint mv_matrix_u = glGetUniformLocation(ShaderProgram, "MVMatrix");
-    GLint normal_matrix_u = glGetUniformLocation(ShaderProgram, "NormalMatrix");
+    GLint position = glGetAttribLocation(ShaderProgram, "Position");
 
-    GLint ambient_u = glGetUniformLocation(ShaderProgram, "Ambient");
-    GLint light_color_u = glGetUniformLocation(ShaderProgram, "LightColor");
-    GLint light_position_u = glGetUniformLocation(ShaderProgram, "LightPosition");
+    glEnableVertexAttribArray(position);
+    GLint normal = glGetAttribLocation(ShaderProgram, "Normal");
+    glEnableVertexAttribArray(normal);
+
+    GLint texcoord = glGetAttribLocation(ShaderProgram, "TexCoord");
+    glEnableVertexAttribArray(texcoord);
+
+    // Light
+    for (int i = 0; i < MaxLights; i++) {
+        string light_name = "Lights[" + std::to_string(i) + "]";
+        GLint isEnabled_u = glGetUniformLocation(ShaderProgram, (light_name + ".isEnabled").c_str());
+        GLint isLocal_u = glGetUniformLocation(ShaderProgram, (light_name + ".isLocal").c_str());
+        GLint isSpot_u = glGetUniformLocation(ShaderProgram, (light_name + ".isSpot").c_str());
+        GLint ambient_u = glGetUniformLocation(ShaderProgram, (light_name + ".ambient").c_str());
+        GLint lightcolor_u = glGetUniformLocation(ShaderProgram, (light_name + ".color").c_str());
+        GLint lightposition_u = glGetUniformLocation(ShaderProgram, (light_name + ".position").c_str());
+
+        GLint constantAttenuation_u = glGetUniformLocation(ShaderProgram, (light_name + ".constantAttenuation").c_str());
+        GLint linearAttenuation_u = glGetUniformLocation(ShaderProgram, (light_name + ".linearAttenuation").c_str());
+        GLint quadraticAttenuation_u = glGetUniformLocation(ShaderProgram, (light_name + ".quadraticAttenuation").c_str());
+
+        glUniform1i(isEnabled_u, lights[i].isEnabled);
+        glUniform1i(isLocal_u, lights[i].isLocal);
+        glUniform1i(isSpot_u, lights[i].isSpot);
+        glUniform3fv(ambient_u, 1, glm::value_ptr(lights[i].ambient));
+        glUniform3fv(lightcolor_u, 1, glm::value_ptr(lights[i].color));
+
+        // TODO: TEST is_camera_coordinate and isLocal
+        if(lights[i].is_camera_coordinate) {
+            glUniform3fv(lightposition_u, 1, glm::value_ptr(lights[i].position));
+        } else {
+            glUniform3fv(lightposition_u, 1, glm::value_ptr(
+                    glm::vec3(
+                        View * glm::vec4(lights[i].position, 1.0)
+                    )
+                )
+            );
+        }
+
+
+        // TODO: INCLUDE OTHER Light Properties
+
+        glUniform1f(constantAttenuation_u, lights[i].constantAttenuation);
+        glUniform1f(linearAttenuation_u, lights[i].linearAttenuation);
+        glUniform1f(quadraticAttenuation_u, lights[i].quadraticAttenuation);
+    }
+
+    // Material
     GLint shininess_u = glGetUniformLocation(ShaderProgram, "Shininess");
     GLint strength_u = glGetUniformLocation(ShaderProgram, "Strength");
-    
-    glEnableVertexAttribArray(position);
-    glEnableVertexAttribArray(normal);
-    glEnableVertexAttribArray(texture);
+    GLint texture_combiner_u = glGetUniformLocation(ShaderProgram, "Texture_combiner");
 
-    glUniform3fv(ambient_u, 1, glm::value_ptr(LightAmbient));
-    glUniform3fv(light_color_u, 1, glm::value_ptr(LightColor));
-
-    glUniform3fv(light_position_u, 1, glm::value_ptr(
-            glm::vec3(
-                View * glm::vec4(LightPosition, 1.0)
-            )
-        )
-    );
-    glUniform1f(shininess_u, Shininess);
-    glUniform1f(strength_u, Strength);
+    GLint gSampler = glGetUniformLocation(ShaderProgram, "gSampler");
+    // TEXTURE0 is difuse color
+    glUniform1i(gSampler, 0);
 
     for (auto it = my_objects.begin(); it != my_objects.end(); ++it) {
-        // color
-        glUniform3fv(color_u, 1, (**it).color);
-        
-        // mvp matrix
-        glUniformMatrix4fv(mvp_matrix_u, 1, GL_FALSE, glm::value_ptr(
-            Projection_matrix * View * (**it).Model_matrix));
-        
-        // mv matrix
-        glUniformMatrix4fv(mv_matrix_u, 1, GL_FALSE, glm::value_ptr(
-            View * (**it).Model_matrix));
+        glUniform1f(shininess_u, (**it).Shininess);
+        glUniform1f(strength_u, (**it).Strength);
 
-        // normal matrix
-        glUniformMatrix3fv(normal_matrix_u, 1, GL_FALSE, glm::value_ptr(
-            glm::inverseTranspose(glm::mat3(View * (**it).Model_matrix))
-        ));
-
-        (**it).render(position, normal, texture);
+        glUniformMatrix4fv(mvp_u, 1, GL_FALSE, glm::value_ptr(Projection_matrix * View * ((**it).Model_matrix)));
+        glUniformMatrix4fv(mv_u, 1, GL_FALSE, glm::value_ptr(View * ((**it).Model_matrix)));
+        glUniformMatrix3fv(normal_u, 1, GL_FALSE, glm::value_ptr(glm::inverseTranspose(glm::mat3(View * ((**it).Model_matrix)))));
+        
+        (**it).render(position, normal, texcoord, color_u, texture_combiner_u);
     }
 }
 
@@ -130,10 +184,6 @@ void scene::set_color(float r, float g, float b) {
         (**it).set_color(r, g, b);
     }
     return;
-}
-
-void scene::set_ambient(float r, float g, float b) {
-    LightAmbient = glm::vec3(r, g, b);
 }
 
 void scene::Ortho3D(float WL, float WR, float WB, float WT, float zNear, float zFar) {
@@ -165,10 +215,24 @@ void scene::perspective(float fovy, float aspect, float zNear, float zFar) {
     Projection_matrix = glm::perspective(fovy, aspect, zNear, zFar);
 }
 
-void scene::push_back_objects(vector<object *> new_objects) {
+void scene::push_back_objects(vector<object*> new_objects) {
     for (auto it = new_objects.begin(); it != new_objects.end(); ++it) {
         my_objects.push_back(*it);
     }
+}
+
+void scene::set_light(int light_number, LightProperties my_light) {
+    if (light_number >= MaxLights || light_number < 0)
+        return;
+    lights[light_number] = my_light;
+    return;
+}
+
+void scene::set_Viewport(int X0, int Y0, int Width, int Height) {
+    ViewportX0 = X0;
+    ViewportY0 = Y0,
+    ViewportWidth = Width;
+    ViewportWidth = Height;
 }
 
 #endif
