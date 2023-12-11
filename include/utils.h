@@ -11,6 +11,14 @@
 #include <fstream>
 using namespace std;
 
+#include <random>
+#include <chrono>
+
+mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+
+float randomFloat() {
+    return rng() / (float) rng.max();
+}
 
 GLchar *readTextFile(const char * name){
      FILE *fp;

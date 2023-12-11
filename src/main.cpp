@@ -16,6 +16,7 @@
 #include <sky.h>
 #include <loadobjects.h>
 #include <tree.h>
+#include <watch_tower.h>
 
 using namespace std;
 
@@ -38,6 +39,7 @@ float cturn = 0;
 Ground pista;
 Sky ceu;
 vector<Tree> arvores(10);
+WatchTower torre[5];
 
 void set_light_default(LightProperties& light) {
     light.isEnabled = true;
@@ -71,13 +73,13 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     if (action != GLFW_RELEASE) {
         switch (key) {
             case GLFW_KEY_W:
-                cspeed = min(1.5f, cspeed + 0.5f);
+                cspeed = min(3.0f, cspeed + 1.0f);
                 carro.set_speed(cspeed);
                 cout << "forward" << endl;
                 break;
 
             case GLFW_KEY_S:
-                cspeed = max(-0.5f, cspeed - 0.5f);
+                cspeed = max(-1.0f, cspeed - 1.0f);
                 carro.set_speed(cspeed);
                 cout << "backward" << endl;
                 break;
@@ -111,11 +113,11 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
                 break;
 
             case GLFW_KEY_LEFT:
-                camera_rotation = (camera_rotation + 359) % 360;
+                camera_rotation = (camera_rotation + 1) % 360;
                 break;
 
             case GLFW_KEY_RIGHT:
-                camera_rotation = (camera_rotation + 1) % 360;
+                camera_rotation = (camera_rotation + 359) % 360;
                 break;
 
             default:
@@ -166,6 +168,11 @@ int main(void) {
     carro = Car("../models/carro", "carro.obj");
     pista = Ground("../models/pista", "terreno.obj");
     ceu = Sky("../models/ceu", "esfera.obj");
+    torre[0] = WatchTower("../models/watch_tower", "wwt.obj");
+    torre[1] = WatchTower("../models/watch_tower", "wwt.obj");
+    torre[2] = WatchTower("../models/watch_tower", "wwt.obj");
+    torre[3] = WatchTower("../models/watch_tower", "wwt.obj");
+    torre[4] = WatchTower("../models/watch_tower", "wwt.obj");
     
     map<string, object*> trees = load_trees_obj("../models/tree", "trees9.obj");
 
@@ -177,9 +184,13 @@ int main(void) {
     my_scene.push_back_objects(carro);
     my_scene.push_back_objects(pista);
     my_scene.push_back_objects(ceu);
+    my_scene.push_back_objects(torre[0]);
+    my_scene.push_back_objects(torre[1]);
+    my_scene.push_back_objects(torre[2]);
+    my_scene.push_back_objects(torre[3]);
+    my_scene.push_back_objects(torre[4]);
 
-
-    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+    glClearColor(0.3f, 0.3f, 0.3f, 0.3f);
     my_scene.set_Viewport(0, 0, width, height);
 
     while (!glfwWindowShouldClose(window)) {

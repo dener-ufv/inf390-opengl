@@ -70,6 +70,9 @@ class scene {
     // render methods
     void render_shadow();
     void render_light();
+
+    // focus
+    glm::vec3 focus;
 };
 
 scene::~scene() {
@@ -121,7 +124,7 @@ void scene::render_shadow() {
     GLint position = glGetAttribLocation(ShaderProgramShadow, "PositionShadow");
     glEnableVertexAttribArray(position);
 
-    ViewMatrixShadow = glm::lookAt(lights[0].position, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+    ViewMatrixShadow = glm::lookAt(lights[0].position, focus, glm::vec3(0.0, 1.0, 0.0));
     ProjectionMatrixShadow = glm::perspective(0.75, 1.0, 0.1, 200.0);
 
     for(object *obj : my_objects) {
@@ -251,6 +254,9 @@ void scene::Model(glm::mat4 model_matrix) {
 void scene::LookAt(float eyex, float eyey, float eyez,
                    float centerx, float centery, float centerz,
                    float upx, float upy, float upz) {
+    
+    focus = glm::vec3(centerx, centery, centerz);
+
     View = glm::lookAt(
         glm::vec3(eyex, eyey, eyez),
         glm::vec3(centerx, centery, centerz),

@@ -12,15 +12,12 @@
 
 #include <iostream>
 
-#include <random>
-#include <chrono>
-
 #include <map>
 
 #include "object.h"
 using namespace std;
 
-mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+#include <utils.h>
 
 class Tree : public vector<object*> {
    public:
@@ -39,17 +36,17 @@ Tree::Tree(object *o) {
 
     object *my_obj = new object(*o);
 
-    float r_angle = rng() / (float) rng.max();
+    float r_angle = randomFloat();
     float angle = r_angle * 2 * glm::pi<float>();
 
-    float r_tx = rng() / (float) rng.max();
-    float r_tz = rng() / (float) rng.max();
+    float r_tx = randomFloat();
+    float r_tz = randomFloat();
 
     float tx = r_tx * 60 - 30 - o->get_center_x();
     float tz = r_tz * 60 - 30 - o->get_center_z();
 
-    float r_scale = rng() / (float) rng.max();
-    float scale = 0.3f + r_scale/10.0;
+    float r_scale = randomFloat();
+    float scale = 0.2f + r_scale/10.0;
 
     cout << tx << " " << tz << " " << scale << endl;
 
