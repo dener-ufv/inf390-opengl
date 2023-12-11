@@ -48,6 +48,7 @@ class object {
     void set_mtl(mtl *mtllib);
 
    private:
+    void render_position(GLint position);
     void render(GLint position, GLint normal, GLint texcoord, GLint color_u, GLint tex_comb_u);
     bool indexed;
     bool wireframe;
@@ -110,6 +111,15 @@ void object::push_left_matrix(glm::mat4 matrix) {
 
 glm::mat4 object::get_Model_matrix() {
     return Model_matrix;
+}
+
+void object::render_position(GLint position) {
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
+    for (auto [ebo, mat, inum] : EBO_material_inumber) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glDrawElements(GL_TRIANGLES, inum, GL_UNSIGNED_INT, NULL);
+    }
 }
 
 void object::render(GLint position, GLint normal, GLint texcoord, GLint color_u, GLint tex_comb_u) {

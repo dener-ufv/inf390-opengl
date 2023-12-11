@@ -60,7 +60,18 @@ class scene {
     LightProperties lights[8];
     const int MaxLights = 8;
     int ViewportX0, ViewportY0, ViewportWidth, ViewportHeight;
+
+    // shadow properties
+    GLuint ShaderProgramShadow;
+    glm::mat4 ProjectionMatrixShadow;
+    glm::mat4 ViewMatrixShadow;
+    ShadowMapFBO shadow_map;
+
+    // render methods
+    void render_shadow();
+    void render_light();
 };
+
 scene::~scene() {
     for (auto it = my_objects.begin(); it != my_objects.end(); ++it) {
         delete (*it);
@@ -74,27 +85,18 @@ scene::scene() {
     Projection_matrix = glm::mat4(1.0);
     View = glm::mat4(1.0);
 
-    for (int i = 1; i < MaxLights; i++)
+    for (int i = 0; i < MaxLights; i++)
         lights[i].isEnabled = false;
 
-    lights[0].is_camera_coordinate = true;
-    lights[0].isEnabled = true;
-    lights[0].isLocal = true;
-    lights[0].isSpot = false;
-
-    lights[0].ambient[0] = lights[0].ambient[1] = lights[0].ambient[2] = 0.3;
-    lights[0].color[0] = lights[0].color[1] = lights[0].color[2] = 1.0;
-    lights[0].position[0] = 0.0;
-    lights[0].position[1] = 10.0;
-    lights[0].position[2] = 0.0;
-
-    lights[0].constantAttenuation = 1.0;
-    lights[0].linearAttenuation = 0.0;
-    lights[0].quadraticAttenuation = 0.0;
     ViewportX0 = 0;
     ViewportY0 = 0;
     ViewportWidth = 800;
     ViewportHeight = 800;
+
+    // shadow properties
+    const char* pVSFileNameShadow = "../src/shader_shadow.vs";
+    const char* pFSFileNameShadow = "../src/shader_shadow.fs";
+    ShaderProgramShadow = CompileShaders(pVSFileNameShadow, pFSFileNameShadow);
 }
 
 void scene::push_back_object(object* new_object) {
@@ -102,16 +104,53 @@ void scene::push_back_object(object* new_object) {
 }
 
 void scene::render() {
+    render_shadow();
+    render_light();
+}
+
+void scene::render_shadow() {
+
+    shadow_map.BindForWriting(); 
+
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(ShaderProgramShadow);
+
+    GLint mvp_u = glGetUniformLocation(ShaderProgramShadow, "MVPMatrixShadow");
+    
+    GLint position = glGetAttribLocation(ShaderProgramShadow, "PositionShadow");
+    glEnableVertexAttribArray(position);
+
+    ViewMatrixShadow = glm::lookAt(lights[0].position, glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+    ProjectionMatrixShadow = glm::perspective(0.75, 1.0, 0.1, 200.0);
+
+    for(object *obj : my_objects) {
+        glUniformMatrix4fv(mvp_u, 1, GL_FALSE, glm::value_ptr(ProjectionMatrixShadow * ViewMatrixShadow * obj->Model_matrix));
+        obj->render_position(position);
+    }
+}
+
+void scene::render_light() {
+    shadow_map.BindForReading(GL_TEXTURE1);
+
+    // SalvarTexura2Image("texture.bmp", 800, 800, 1);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(ViewportX0, ViewportY0, ViewportWidth, ViewportHeight);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     glUseProgram(ShaderProgram);
+
     GLint color_u = glGetUniformLocation(ShaderProgram, "Color");
     GLint mvp_u = glGetUniformLocation(ShaderProgram, "MVPMatrix");
+    GLint light_mvp_u = glGetUniformLocation(ShaderProgram, "LightMVPMatrix");
     GLint mv_u = glGetUniformLocation(ShaderProgram, "MVMatrix");
     GLint normal_u = glGetUniformLocation(ShaderProgram, "NormalMatrix");
 
     GLint position = glGetAttribLocation(ShaderProgram, "Position");
-
     glEnableVertexAttribArray(position);
+
     GLint normal = glGetAttribLocation(ShaderProgram, "Normal");
     glEnableVertexAttribArray(normal);
 
@@ -163,25 +202,32 @@ void scene::render() {
     GLint strength_u = glGetUniformLocation(ShaderProgram, "Strength");
     GLint texture_combiner_u = glGetUniformLocation(ShaderProgram, "Texture_combiner");
 
-    GLint gSampler = glGetUniformLocation(ShaderProgram, "gSampler");
     // TEXTURE0 is difuse color
+    GLint gSampler = glGetUniformLocation(ShaderProgram, "gSampler");
     glUniform1i(gSampler, 0);
 
-    for (auto it = my_objects.begin(); it != my_objects.end(); ++it) {
-        glUniform1f(shininess_u, (**it).Shininess);
-        glUniform1f(strength_u, (**it).Strength);
+    // TEXTURE1 is shadow
+    GLint gSamplerShadowMap = glGetUniformLocation(ShaderProgram, "gSamplerShadowMap");
+    glUniform1i(gSamplerShadowMap, 1);
 
-        glUniformMatrix4fv(mvp_u, 1, GL_FALSE, glm::value_ptr(Projection_matrix * View * ((**it).Model_matrix)));
-        glUniformMatrix4fv(mv_u, 1, GL_FALSE, glm::value_ptr(View * ((**it).Model_matrix)));
-        glUniformMatrix3fv(normal_u, 1, GL_FALSE, glm::value_ptr(glm::inverseTranspose(glm::mat3(View * ((**it).Model_matrix)))));
+    for (object *obj : my_objects) {
+        glUniform1f(shininess_u, obj->Shininess);
+        glUniform1f(strength_u, obj->Strength);
+
+        glUniformMatrix4fv(mvp_u, 1, GL_FALSE, glm::value_ptr(Projection_matrix * View * (obj->Model_matrix)));
+        glUniformMatrix4fv(mv_u, 1, GL_FALSE, glm::value_ptr(View * (obj->Model_matrix)));
+        glUniformMatrix3fv(normal_u, 1, GL_FALSE, glm::value_ptr(glm::inverseTranspose(glm::mat3(View * (obj->Model_matrix)))));
         
-        (**it).render(position, normal, texcoord, color_u, texture_combiner_u);
+        // light MVP matrix
+        glUniformMatrix4fv(light_mvp_u, 1, GL_FALSE, glm::value_ptr(ProjectionMatrixShadow * ViewMatrixShadow * obj->Model_matrix));
+
+        obj->render(position, normal, texcoord, color_u, texture_combiner_u);
     }
 }
 
 void scene::set_color(float r, float g, float b) {
-    for (auto it = my_objects.begin(); it != my_objects.end(); ++it) {
-        (**it).set_color(r, g, b);
+    for (object *obj : my_objects) {
+        obj->set_color(r, g, b);
     }
     return;
 }
@@ -196,8 +242,8 @@ void scene::Ortho3D(float WL, float WR, float WB, float WT, float zNear, float z
 }
 
 void scene::Model(glm::mat4 model_matrix) {
-    for (auto it = my_objects.begin(); it != my_objects.end(); ++it) {
-        (**it).push_left_matrix(model_matrix);
+    for (object *obj : my_objects) {
+        obj->push_left_matrix(model_matrix);
     }
     return;
 }

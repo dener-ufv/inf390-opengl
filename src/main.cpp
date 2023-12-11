@@ -27,6 +27,8 @@ int worldx = 0, worldy = 0, worldz = 0;
 glm::vec3 base_focus(0.0, 0.0, 0.0);
 glm::vec3 base_camera(0.0, 5.0, -7.0);
 
+int camera_rotation = 0;
+
 glm::vec3 camera(0.0, 5.0, -7.0);
 
 Car carro;
@@ -38,16 +40,15 @@ Sky ceu;
 vector<Tree> arvores(10);
 
 void set_light_default(LightProperties& light) {
-    light.is_camera_coordinate = true;
     light.isEnabled = true;
     light.isLocal = true;
     light.isSpot = false;
 
     light.ambient[0] = light.ambient[1] = light.ambient[2] = 0.3;
     light.color[0] = light.color[1] = light.color[2] = 1.0;
-    light.position[0] = 0.0;
-    light.position[1] = 10.0;
-    light.position[2] = 0.0;
+    light.position[0] = 40.0;
+    light.position[1] = 20.0;
+    light.position[2] = 30.0;
 
     light.constantAttenuation = 1.0;
     light.linearAttenuation = 0.0;
@@ -107,6 +108,14 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
             case GLFW_KEY_DOWN:
                 base_focus[1] -= 0.05;
+                break;
+
+            case GLFW_KEY_LEFT:
+                camera_rotation = (camera_rotation + 359) % 360;
+                break;
+
+            case GLFW_KEY_RIGHT:
+                camera_rotation = (camera_rotation + 1) % 360;
                 break;
 
             default:
@@ -183,9 +192,19 @@ int main(void) {
 
         carro.update();
 
-        // camera low pass filter
         glm::vec3 goal_focus = glm::vec3(carro.get_model() * glm::vec4(base_focus, 1.0));
-        glm::vec3 goal_camera = glm::vec3(carro.get_model() * glm::vec4(base_camera, 1.0));
+
+        glm::vec3 goal_camera = glm::vec3(
+            carro.get_model() *
+            glm::rotate(
+                glm::mat4(1.0),
+                (float)glm::radians((float)camera_rotation),
+                glm::vec3(0.0, 1.0, 0.0)
+            ) *
+            glm::vec4(base_camera, 1.0)
+        );
+
+        // camera low pass filter
         camera = camera * 0.999f + goal_camera * 0.001f;
 
         my_scene.LookAt(camera[0], camera[1], camera[2], goal_focus[0], goal_focus[1], goal_focus[2], 0.0, 1.0, 0.0);

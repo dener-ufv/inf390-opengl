@@ -196,7 +196,7 @@ void SalvarTexura2Image(const char* nomeArquivo,int W,int H,int C,bool normaliza
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
 
     // Impressão das informações
-    std::cout << "Unidade de textura ativa: " << activeTexture << std::endl;
+    std::cout << "Unidade de textura ativa: " << activeTexture - GL_TEXTURE0 << std::endl;
     std::cout << "Textura vinculada à unidade ativa: " << boundTexture << std::endl;
 
     float*  depthData = new float[W* H*C]; // RGBA format

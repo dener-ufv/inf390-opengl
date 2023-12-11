@@ -1,22 +1,22 @@
 #ifndef SHADOWMAPFBO_H
-#define	SHADOWMAPFBO_H
+#define SHADOWMAPFBO_H
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 #include <string.h>
-#include <iostream>
+
 #include <fstream>
+#include <iostream>
+
 #include "utils.h"
 using namespace std;
-#include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <glm/glm.hpp>
 
-
-class ShadowMapFBO
-{
-public:
+class ShadowMapFBO {
+   public:
     ShadowMapFBO();
 
     ~ShadowMapFBO();
@@ -26,25 +26,25 @@ public:
     void BindForWriting();
 
     void BindForReading(GLenum TextureUnit);
-    int getWidth(){return  m_Width;};
-    int getHeight(){return m_Height;};
+    int getWidth() { return m_Width; };
+    int getHeight() { return m_Height; };
 
-private:
-    int m_Width,m_Height;
+   private:
+    int m_Width, m_Height;
     GLuint m_fbo;
     GLuint m_shadowMap;
 };
 
-ShadowMapFBO::ShadowMapFBO()
-{
+ShadowMapFBO::ShadowMapFBO() {
     m_fbo = 0;
     m_shadowMap = 0;
     m_Width = 800;
     m_Height = 800;
+
+    Init(m_Width, m_Height);
 }
 
-ShadowMapFBO::~ShadowMapFBO()
-{
+ShadowMapFBO::~ShadowMapFBO() {
     if (m_fbo != 0) {
         glDeleteFramebuffers(1, &m_fbo);
     }
@@ -54,8 +54,7 @@ ShadowMapFBO::~ShadowMapFBO()
     }
 }
 
-bool ShadowMapFBO::Init(unsigned int Width, unsigned int Height)
-{
+bool ShadowMapFBO::Init(unsigned int Width, unsigned int Height) {
     m_Width = Width;
     m_Height = Height;
     // Create the FBO
@@ -65,63 +64,54 @@ bool ShadowMapFBO::Init(unsigned int Width, unsigned int Height)
     glGenTextures(1, &m_shadowMap);
     glBindTexture(GL_TEXTURE_2D, m_shadowMap);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Width, Height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR );
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColor[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    float borderColor[] = {1.0f, 0.0f, 0.0f, 1.0f};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_shadowMap, 0);
-  
-   // Disable writes to the color buffer
+
+    // Disable writes to the color buffer
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
-  
+
     GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    
+
     if (Status != GL_FRAMEBUFFER_COMPLETE) {
         printf("FB error, status: 0x%x\n", Status);
         return false;
+    } else {
+        cout << "FB ok!" << endl;
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    
 
     return true;
 }
 
-
-void ShadowMapFBO::BindForWriting()
-{
-    
+void ShadowMapFBO::BindForWriting() {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
-    /*
+    glViewport(0, 0, m_Width, m_Height);
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
         cout << "Error no BindForWriting " << endl;
         if(error == GL_INVALID_ENUM )
             cout << "GL_INVALID_ENUM" << endl;
     }
-    */
-    glViewport(0,0,m_Width,m_Height);
-  
 }
 
-
-void ShadowMapFBO::BindForReading(GLenum TextureUnit)
-{
-    glActiveTexture(TextureUnit);    
+void ShadowMapFBO::BindForReading(GLenum TextureUnit) {
+    glActiveTexture(TextureUnit);
     glBindTexture(GL_TEXTURE_2D, m_shadowMap);
-    /*
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
         cout << "Error no BindForWriting " << endl;
         if(error == GL_INVALID_ENUM )
             cout << "GL_INVALID_ENUM" << endl;
     }
-    */
 }
 
-#endif	/* SHADOWMAPFBO_H */
+#endif /* SHADOWMAPFBO_H */

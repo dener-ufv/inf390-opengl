@@ -49,7 +49,7 @@ Tree::Tree(object *o) {
     float tz = r_tz * 60 - 30 - o->get_center_z();
 
     float r_scale = rng() / (float) rng.max();
-    float scale = r_scale;
+    float scale = 0.3f + r_scale/10.0;
 
     cout << tx << " " << tz << " " << scale << endl;
 
