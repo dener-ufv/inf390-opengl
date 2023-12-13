@@ -21,9 +21,9 @@ Para criar uma versão mais bonita e melhor do carro, foi utilizada uma blueprin
 ![Desenvolvimento1](imgs/parte2.png)
 ![Desenvolvimento1](imgs/parte3.png)
 
-### Modelando a Pista
+### Modelando o mundo
 
-Esta parte ficará mais bem explicada na próxima etapa do trabalho, onde serão realmente utilizadas as texturas.
+Para a modelagem do mundo foi utilizada uma esfera dividida ao meio por um plano horizontal. Essa esfera é então texturizada com uma imagem com céu e nuvens. A pista é formada por um plano com textura de imagem de uma pista de corrida.
 
 ## Desenvolvimento OpenGL
 
@@ -59,21 +59,15 @@ O movimento para frente e para trás é feito com as teclas 'w' e 's' respectiva
 
 A unidade de medida de velocidade é feita pela quantidade de graus que a roda **traseira** gira a cada TICK do relógio, ou seja, a cada update do modelo. Esta informação é importante pois a velocidade pode variar dependendo da velocidade do processador do computador.
 
-### Modos da Câmera
+### Movimentos da câmera
 
-O modo padrão da câmera é acompanhar o carro durante o movimento. Mas isso pode ser mudado usando **SHIFT + f**. Neste modo a câmera fica fixa e apenas o carro se move na cena. Para voltar para o original, basta apertar 'f'.
+A câmera faz 4 tipos de movimento, ela pode se mover em um formato circular em volta do carro ou pode ser apontada (lookAt) mais para cima ou mais para baixo. Utilize os botões UP, DOWN, LEFT e RIGHT para controlar a câmera.
+
+Além disso a câmera pode se mover para mais perto ou mais longe do carro utilizando a tecla Z ou SHIFT+Z.
 
 ## Execução
 
 Os resultados desta etapa do trabalho poder ser vistos executando o trabalho, mas existem dois vídeos exemplificando o funcionamento.
-
-### Câmera Fixa
-
-![CameraFixa](imgs/camera-fixa-gif.gif)
-
-### Camera Móvel
-
-![CameraMovel](imgs/camera-movel-gif.gif)
 
 ## Desenvolvedor
 
